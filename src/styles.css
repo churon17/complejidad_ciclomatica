@@ -1,1 +1,31 @@
-/* You can add global styles to this file, and also import other style files */
+/* @import '~highlight.js/styles/dracula.css'; */
+
+.padding {
+  padding: 20px;
+}
+
+.padding-row{
+  padding-left: 100px;
+  padding-right: 100px;
+}
+
+.row {
+  display: flex;
+}
+
+.column {
+  flex: 40%;
+}
+
+.rounded {
+  border-radius: 150px;
+}
+
+
+.column-left{
+  margin-right: 50px;
+}
+
+.column-right{
+  margin-left: 50px;
+}
