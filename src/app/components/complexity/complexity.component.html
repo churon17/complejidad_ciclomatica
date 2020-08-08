@@ -1,32 +1,53 @@
 <div class="padding">
   <div class="input-group w-25 p-3 justify-content-center mx-auto">
     <div class="custom-file">
-      <input class="custom-file-input" (change)="selectScript($event.target.files[0])" type="file" id="inputGroupFile01" aria-describedby="inputGroupFileAddon01">
-      <label class="custom-file-label" for="inputGroupFile01">{{fileName}}</label>
+      <input
+        class="custom-file-input"
+        (change)="selectScript($event.target.files[0])"
+        type="file"
+        id="inputGroupFile01"
+        aria-describedby="inputGroupFileAddon01"
+      />
+      <label class="custom-file-label" for="inputGroupFile01">
+        {{ fileName}}
+      </label>
     </div>
   </div>
 
-  <div class="text-center">
-    <b>Tipo de Archivo:</b> {{currentFileType}}
-  </div>
+  <div class="text-center"><b>Tipo de Archivo:</b> {{ currentFileType }}</div>
 
-
-  <br>
+  <br />
   <div class="row padding-row">
+
     <div class="column column-left">
       <pre>
-        <code class="rounded" [highlight]="code" [languages]="['javascript', 'java', 'python']" [lineNumbers]="true"></code>
+        <code class="rounded code" [highlight]="code" [languages]="['javascript', 'java', 'python']" [lineNumbers]="true"></code>
       </pre>
     </div>
 
-    <div class="column column-right">
-      <div>
-        <pre>
-          <code class="rounded" [highlight]="code" [languages]="['javascript', 'java', 'python']" [lineNumbers]="true"></code>
-        </pre>
+    <div class="column column-right ">
+      <div class="rounded graph_background">
+        <ngx-graph
+        class="chart-container"
+        [view]="[600, 400]"
+        [links]="links"
+        [nodes]="nodes"
+        layout="dagreCluster">
+          <ng-template #nodeTemplate let-node>
+            <svg:g class="node" ngx-tooltip [tooltipPlacement]="'top'" [tooltipType]="'tooltip'" [tooltipTitle]="node.label">
+              <svg:circle
+                [attr.cy]="node.dimension.width/2"
+                [attr.r]="node.dimension.width/2"
+                [attr.cx]="node.dimension.height/2"
+                [attr.fill]="node.data.color"w
+              />
+              <svg:text alignment-baseline="central" [attr.x]="10" [attr.y]="node.dimension.height / 2">
+                {{node.label}}
+              </svg:text>
+            </svg:g>
+          </ng-template>
+        </ngx-graph>
       </div>
     </div>
   </div>
-
 </div>
-

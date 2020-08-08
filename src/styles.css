@@ -14,11 +14,11 @@
 }
 
 .column {
-  flex: 40%;
+  flex: 30%;
 }
 
 .rounded {
-  border-radius: 150px;
+  border-radius: 800px;
 }
 
 
@@ -28,4 +28,15 @@
 
 .column-right{
   margin-left: 50px;
+}
+
+
+.code{
+  width: 500px;
+}
+
+.graph_background{
+  background-color: aquamarine;
+  display: flex;
+  margin-top: 20px;
 }

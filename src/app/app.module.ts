@@ -7,12 +7,13 @@ import { StudentsComponent } from './components/students/students.component';
 import { ComplexityComponent } from './components/complexity/complexity.component';
 /* Routing */
 import { APP_ROUTES } from './app.routes';
-
 import { HighlightModule, HIGHLIGHT_OPTIONS } from 'ngx-highlightjs';
 import * as hljs from 'highlight.js';
 (document.defaultView as any).hljs = hljs;
 
-
+import { NgxGraphModule } from '@swimlane/ngx-graph';
+import { NgxChartsModule } from '@swimlane/ngx-charts';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
   declarations: [
@@ -23,7 +24,9 @@ import * as hljs from 'highlight.js';
   ],
   imports: [
     HighlightModule,
-
+    BrowserAnimationsModule,
+    NgxGraphModule,
+    NgxChartsModule,
     BrowserModule,
     APP_ROUTES
   ],

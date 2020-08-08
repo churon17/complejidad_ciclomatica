@@ -8,8 +8,63 @@ import { HighlightResult } from 'ngx-highlightjs';
   styles: []
 })
 
-
 export class ComplexityComponent{
+
+  links: any[] = [
+    {
+      id: 'a',
+      source: 'first',
+      target: 'second',
+      label: 'is parent of'
+    },
+    {
+      id: 'b',
+      source: 'first',
+      target: 'c1',
+      label: 'custom label'
+    },
+    {
+      id: 'd',
+      source: 'first',
+      target: 'c2',
+      label: 'custom label'
+    },
+    {
+      id: 'e',
+      source: 'c1',
+      target: 'd',
+      label: 'first link'
+    },
+    {
+      id: 'f',
+      source: 'c1',
+      target: 'd',
+      label: 'second link'
+    }
+  ];
+
+  nodes: any[] = [
+    {
+      id: 'first',
+      label: 'A'
+    },
+    {
+      id: 'second',
+      label: 'B'
+    },
+    {
+      id: 'c1',
+      label: 'C1'
+    },
+    {
+      id: 'c2',
+      label: 'C2'
+    },
+    {
+      id: 'd',
+      label: 'D'
+    }
+  ];
 
   fileName: string = 'Elegir Archivo';
 
@@ -38,8 +93,7 @@ export class ComplexityComponent{
 
     this.code = await this.readFile(this.uploadFile);
 
-    console.log(this.code);
-
+    this.readFileLineByLine(this.code);
   }
 
 
@@ -78,5 +132,11 @@ export class ComplexityComponent{
       };
       fileReader.readAsText(this.uploadFile);
     });
+  }
+
+  readFileLineByLine(file : string){
+
+    console.log(file.split('\n'));
+
   }
 }
