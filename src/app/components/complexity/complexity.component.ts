@@ -1,8 +1,6 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import Swal from 'sweetalert2';
 import { Subject } from 'rxjs';
-import { element } from 'protractor';
-
 
 @Component({
   selector: 'app-complexity',
@@ -210,11 +208,9 @@ export class ComplexityComponent{
 
     checkParents = checkParents.sort((a, b) => a[1] - b[1]);
 
-    const parents = [];
+    let parents = [];
 
     for (const firstValue of checkParents) {
-
-      if ((firstValue[1] + 1) !== (firstValue[2] - 1)){
 
         const childrens: any = [];
 
@@ -246,10 +242,10 @@ export class ComplexityComponent{
         };
 
         parents.push(parent);
-      }
     }
 
-    console.log(parents, 'PADRES');
+    /* Filtro el arreglo de padres, eliminando los padres que no tienen hijos */
+    parents = parents.filter(parent =>  parent.childrens.length !== 0);
 
     return parents;
   }
@@ -308,42 +304,99 @@ export class ComplexityComponent{
 
 
   drawChildrenWithLink(parent: any){
-    console.log('Arreglo parents.childres', parent.parent );
-    console.log(this.parentsInstructions);
+
+    console.log('Padre', this.parentsInstructions);
+
     parent.childrens.forEach((children, index)  => {
 
       if (!this.existNodeInGraph(`N${children[1]}`)) {
         const idLink = 'l' + children[1].toString() + children[2].toString();
-        const linkWithFather = 'l' + parent.parent[1].toString() + children[1].toString();
 
+        /* ESTE IF - Tomamos en cuenta el primer hijo del padre, para crear los nodos y links de las noInstrucciones
+        entre ellos */
         if (index === 0){
-          let areInstructionsInside = false;
-          for (let init = parent.parent[1] + 1; init < children[1]; init++) {
-            this.createNodeForGraph(`N${init}`);
-            this.createLinkForGraph('L', `N${parent.parent[1]}`, `N${init}` );
-            this.createLinkForGraph('L', `N${init}`, `N${children[1]}` );
-            areInstructionsInside = true;
-          }
-          if (!areInstructionsInside){
-            this.createLinkForGraph(linkWithFather, `N${parent.parent[1]}`, `N${children[1]}` );
-          }
+          const notInstructions = this.getArrayOfNotInstructions(parent.parent[1], children[1]);
+          this.createNodesAndLinksForNotInstructions(parent.parent, children, notInstructions);
         }
 
+        /* Creamos el nodo  para la instrucción hija con su respectivo nodo de terminación y el enlace entre ellos*/
         this.createNodeForGraph(`N${children[1]}`);
         this.createNodeForGraph(`N${children[2]}`);
         this.createLinkForGraph(idLink, `N${children[1]}`, `N${children[2]}`);
       }
 
+      /*  Verificamos todas las instrucciones que no son padres
+      Tomando en cuenta que una instrucción que es hijo, también puede ser padre
+      */
       const isParent = this.drawInstructionInsideNoParent(children);
 
       if (!isParent){
-        this.createNodeForGraph(`N${children[1] + 1}`);
-        this.createLinkForGraph('L', `N${children[1]}`, `N${children[1] + 1}` );
-        this.createLinkForGraph('L', `N${children[1] + 1}`, `N${children[2]}` );
+
+        console.log('Pilas con estos', children[1], children[2]);
+
+        const notInstructions = this.getArrayOfNotInstructions(children[1], children[2]);
+
+        console.log('nO INSTRUCCIONES', notInstructions);
+
+
+        this.createNodesAndLinksForNotInstructions([1, children[1]], [1, children[2]], notInstructions);
       }
 
     });
   }
+
+
+  getArrayOfNotInstructions(initial: number, end: number): number[]{
+    const notInstructions: number[] = [];
+
+    for (let init = initial + 1; init < end; init++) {
+      notInstructions.push(init);
+    }
+
+    return notInstructions;
+  }
+
+  /*  Crea los nodos y los links entre el primer hijo y el padre*/
+  createNodesAndLinksForNotInstructions(parent: any, children: any, notInstructions: any[]){
+
+    /* Verificamos que entre la instrucción Padre y la primera instrucción hija exista más de una no instrucción */
+    if (notInstructions.length > 1){
+      for (let init = 0; init < notInstructions.length; init++) {
+
+        /* Creamos el nodo para la no instrucción */
+        this.createNodeForGraph(`N${notInstructions[init]}`);
+
+        /* Si es que es la primera instrucción hacemos el enlace con el padre */
+        if (init === 0){
+          this.createLinkForGraph('L', `N${parent[1]}`, `N${notInstructions[init]}`);
+        }
+
+        /* Si es que es la ultima instrucción hacemos el enlace con el hijo */
+        if (init === notInstructions.length - 1){
+          this.createLinkForGraph('L', `N${notInstructions[init]}`, `N${children[1]}`);
+        }
+
+        /* En caso que exista más de dos noInstrucciones*/
+        if (notInstructions.length > 2){
+
+          this.createLinkForGraph('L', `N${notInstructions[init] - 1}`, `N${notInstructions[init]}`);
+          this.createLinkForGraph('L', `N${notInstructions[init]}`, `N${notInstructions[init] + 1}`);
+
+        }else{
+          this.createLinkForGraph('L', `N${notInstructions[init]}`, `N${notInstructions[init] + 1}`);
+        }
+
+      }
+    }else if (notInstructions.length === 1){
+      /* En caso de que exista una sola instrucción entre la instrucción padre e hija */
+      const linkWithFather = 'l' + parent[1].toString() + children[1].toString();
+      this.createNodeForGraph(`N${notInstructions[0]}`);
+      this.createLinkForGraph(linkWithFather, `N${parent[1]}`, `N${notInstructions[0]}` );
+      this.createLinkForGraph(linkWithFather, `N${notInstructions[0]}`, `N${children[1]}` );
+    }
+  }
+
+
 
   drawBrothers(parent: any){
       /* Ordenar Hermanos */
