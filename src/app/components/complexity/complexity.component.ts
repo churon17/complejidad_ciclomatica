@@ -1,8 +1,6 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import Swal from 'sweetalert2';
 import { Subject } from 'rxjs';
-import { element } from 'protractor';
-
 
 @Component({
   selector: 'app-complexity',
@@ -16,59 +14,9 @@ export class ComplexityComponent{
   center$: Subject<boolean> = new Subject();
   zoomToFit$: Subject<boolean> = new Subject();
 
-  links: any[] = [
-    {
-      id: 'a',
-      source: 'first',
-      target: 'second',
-      label: 'is parent of'
-    },
-    {
-      id: 'b',
-      source: 'first',
-      target: 'c1',
-      label: 'custom label'
-    },
-    {
-      id: 'd',
-      source: 'first',
-      target: 'c2',
-      label: 'custom label'
-    },
-    {
-      id: 'f',
-      source: 'd',
-      target: 'e',
-      label: 'custom label'
-    },
-  ];
+  links: any[] = [];
 
-  nodes: any[] = [
-    {
-      id: 'first',
-      label: 'A'
-    },
-    {
-      id: 'second',
-      label: 'B'
-    },
-    {
-      id: 'c1',
-      label: 'C1'
-    },
-    {
-      id: 'c2',
-      label: 'C2'
-    },
-    {
-      id: 'd',
-      label: 'D'
-    },
-    {
-      id: 'e',
-      label: 'E'
-    }
-  ];
+  nodes: any[] = [];
 
   fileName: string = 'Elegir Archivo';
 
@@ -107,27 +55,19 @@ export class ComplexityComponent{
 
   verifyFileType(file: File){
 
-    if (file.type.indexOf('javascript') < 0){
-      if (file.type.indexOf('java') < 0){
-        if (file.type.indexOf('php') < 0){
-          Swal.fire(
-            {
-              icon: 'error',
-              title: 'Oops...',
-              text: 'Por favor selecciona un archivo válido',
-            }
-          );
-          this.uploadFile = null;
-          return;
-        }else{
-          this.currentFileType = 'PHP';
+    if (file.type.indexOf('java') < 0){
+      Swal.fire(
+        {
+          icon: 'error',
+          title: 'Oops...',
+          text: 'Por favor selecciona un archivo válido',
         }
-      }else{
-        this.currentFileType = 'Java';
-      }
-    }else{
-      this.currentFileType = 'JavaScript';
-    }
+      );
+      this.uploadFile = null;
+      return;
+  }else{
+    this.currentFileType = 'Java';
+  }
   }
 
   readFile(): Promise<string>{
@@ -146,11 +86,7 @@ export class ComplexityComponent{
 
     const contentFilePerLine: string[] = contentFile.split('\n').map(line => line.trim()).filter(line => line !== '');
 
-    const complexity = this.currentFileType === 'Java' ? this.calculateComplexityJava(contentFilePerLine)
-    : this.currentFileType === 'PHP' ? this.calculateComplexityPhp(contentFilePerLine)
-    : this.calculateComplexityJS(contentFilePerLine);
-
-
+    const complexity = this.calculateComplexityJava(contentFilePerLine);
   }
 
 
@@ -210,11 +146,9 @@ export class ComplexityComponent{
 
     checkParents = checkParents.sort((a, b) => a[1] - b[1]);
 
-    const parents = [];
+    let parents = [];
 
     for (const firstValue of checkParents) {
-
-      if ((firstValue[1] + 1) !== (firstValue[2] - 1)){
 
         const childrens: any = [];
 
@@ -246,10 +180,10 @@ export class ComplexityComponent{
         };
 
         parents.push(parent);
-      }
     }
 
-    console.log(parents, 'PADRES');
+    /* Filtro el arreglo de padres, eliminando los padres que no tienen hijos */
+    parents = parents.filter(parent =>  parent.childrens.length !== 0);
 
     return parents;
   }
@@ -306,43 +240,165 @@ export class ComplexityComponent{
     return isParent;
   }
 
+   /* Obtener las líneas de código que no son instrucciones(If, for, ...) */
+  getArrayOfNotInstructions(parent: any): number[]{
+
+    const notInstructions: number[] = [];
+
+    const initialValue = parent.parent[1];
+
+    const endValue = parent.parent[2];
+
+    for (let init = initialValue + 1; init < endValue; init++) {
+
+      let insideSon = false;
+
+      parent.childrens.forEach( currentChildren => {
+
+        if (init >= currentChildren[1] && init <= currentChildren[2]){
+          insideSon = true;
+        }
+      });
+
+      if (!insideSon){
+        notInstructions.push(init);
+      }
+
+    }
+    return notInstructions;
+  }
+
 
   drawChildrenWithLink(parent: any){
-    console.log('Arreglo parents.childres', parent.parent );
-    console.log(this.parentsInstructions);
+
+    console.log('Padre', this.parentsInstructions);
+
     parent.childrens.forEach((children, index)  => {
 
       if (!this.existNodeInGraph(`N${children[1]}`)) {
         const idLink = 'l' + children[1].toString() + children[2].toString();
-        const linkWithFather = 'l' + parent.parent[1].toString() + children[1].toString();
 
+        /* ESTE IF - Tomamos en cuenta el primer hijo del padre, para crear los nodos y links de las noInstrucciones
+        entre ellos */
         if (index === 0){
-          let areInstructionsInside = false;
-          for (let init = parent.parent[1] + 1; init < children[1]; init++) {
-            this.createNodeForGraph(`N${init}`);
-            this.createLinkForGraph('L', `N${parent.parent[1]}`, `N${init}` );
-            this.createLinkForGraph('L', `N${init}`, `N${children[1]}` );
-            areInstructionsInside = true;
-          }
-          if (!areInstructionsInside){
-            this.createLinkForGraph(linkWithFather, `N${parent.parent[1]}`, `N${children[1]}` );
-          }
+          // const notInstructions = this.getArrayOfNotInstructionsInsideChildren(parent.parent[1], children[1]);
+          // this.createNodesAndLinksForNotInstructions(parent.parent, children, notInstructions);
         }
 
+        /* Creamos el nodo  para la instrucción hija con su respectivo nodo de terminación y el enlace entre ellos*/
         this.createNodeForGraph(`N${children[1]}`);
         this.createNodeForGraph(`N${children[2]}`);
         this.createLinkForGraph(idLink, `N${children[1]}`, `N${children[2]}`);
       }
 
+      /*  Verificamos todas las instrucciones que no son padres
+      Tomando en cuenta que una instrucción que es hijo, también puede ser padre
+      */
       const isParent = this.drawInstructionInsideNoParent(children);
 
       if (!isParent){
-        this.createNodeForGraph(`N${children[1] + 1}`);
-        this.createLinkForGraph('L', `N${children[1]}`, `N${children[1] + 1}` );
-        this.createLinkForGraph('L', `N${children[1] + 1}`, `N${children[2]}` );
-      }
 
+        console.log('Pilas con estos', children[1], children[2]);
+
+        const notInstructionsInsideChildren = this.getArrayOfNotInstructionsInsideChildren(children[1], children[2]);
+
+        this.createNodesAndLinksForNotInstructions([1, children[1]], [1, children[2]], notInstructionsInsideChildren);
+      }
     });
+
+    const notInstructions = this.getArrayOfNotInstructions(parent);
+    this.createNodesAndLinksForNotInstructions1(parent, notInstructions);
+
+  }
+
+  getArrayOfNotInstructionsInsideChildren(initialValue, endValue){
+    const notInstructions: number[] = [];
+
+    for (let init = initialValue + 1; init < endValue; init++) {
+      notInstructions.push(init);
+    }
+
+    return notInstructions;
+  }
+
+  createNodesAndLinksForNotInstructions1(parent: any, notInstructions: any[]){
+
+    console.log('Parent 345', parent);
+    console.log('Not instructins', notInstructions);
+
+    /* Si es que no hay lineas entre una instrucción padre e hija, se hace el link entre ellas*/
+    if (notInstructions.length === 0){
+      this.createLinkForGraph('L', `N${parent.parent[1]}`, `N${parent.childrens[0][1]}`);
+    }
+
+    if (notInstructions.length === 1){
+      /* En caso de que exista una sola linea entre la instrucción padre e hija */
+      const linkWithFather = 'l' + parent.parent[0][1].toString() + notInstructions[0].toString();
+      this.createNodeForGraph(`N${notInstructions[0]}`);
+      this.createLinkForGraph(linkWithFather, `N${parent.parent[1]}`, `N${notInstructions[0]}`);
+      this.createLinkForGraph(linkWithFather, `N${notInstructions[0]}`, `N${parent.childrens[0][1]}`);
+    }else{
+      /* Si es que exise más de una linea entre instrucciones padre e hija  */
+      for (let init = 0; init < notInstructions.length; init++) {
+
+        /* Creamos el nodo para la no instrucción */
+        this.createNodeForGraph(`N${notInstructions[init]}`);
+
+        parent.childrens.forEach(children => {
+          /* Para establecer el enlace con el padre(Inicio) */
+          if (notInstructions[init] - 1 === parent.parent[1]){
+            this.createLinkForGraph('L', `N${parent.parent[1]}`, `N${notInstructions[init]}` );
+          }
+          if (notInstructions[init] + 1 === children[1]){
+            /* Para establecer el enlace con algun hijo(Inicio) del padre*/
+            this.createLinkForGraph('L',  `N${notInstructions[init]}`, `N${children[1]}` );
+          }
+          if (notInstructions[init] - 1 === children[2]){
+            /* Para establecer el enlace con algun hijo(Fin) del padre*/
+            this.createLinkForGraph('L',  `N${children[2]}`, `N${notInstructions[init]}` );
+          }
+          if (notInstructions[init] + 1 === parent.parent[2]){
+            /* Para establecer el enlace con algun hijo(Fin) del padre*/
+            this.createLinkForGraph('L',  `N${notInstructions[init]}`, `N${parent.parent[2]}` );
+          }
+          this.createLinkForGraph('L', `N${notInstructions[init] - 1}`, `N${notInstructions[init]}`);
+        });
+      }
+    }
+  }
+
+  /*  Crea los nodos y los links entre el primer hijo y el padre*/
+  createNodesAndLinksForNotInstructions(parent: any, children: any, notInstructions: any[]){
+
+    /* Verificamos que entre la instrucción Padre y la primera instrucción hija exista más de una no instrucción */
+    if (notInstructions.length > 1){
+      for (let init = 0; init < notInstructions.length; init++) {
+
+        /* Creamos el nodo para la no instrucción */
+        this.createNodeForGraph(`N${notInstructions[init]}`);
+
+        /* Si es que es la ultima instrucción hacemos el enlace con el hijo */
+        if (init === notInstructions.length - 1){
+          this.createLinkForGraph('L', `N${notInstructions[init]}`, `N${children[1]}`);
+        }
+
+        /* En caso que exista más de dos noInstrucciones*/
+        if (notInstructions.length > 2){
+
+          this.createLinkForGraph('L', `N${notInstructions[init] - 1}`, `N${notInstructions[init]}`);
+          this.createLinkForGraph('L', `N${notInstructions[init]}`, `N${notInstructions[init] + 1}`);
+
+        }else{
+          this.createLinkForGraph('L', `N${notInstructions[init]}`, `N${notInstructions[init] + 1}`);
+        }
+      }
+    }else if (notInstructions.length === 1){
+      /* En caso de que exista una sola instrucción entre la instrucción padre e hija */
+      const linkWithFather = 'l' + parent[1].toString() + children[1].toString();
+      this.createNodeForGraph(`N${notInstructions[0]}`);
+      this.createLinkForGraph(linkWithFather, `N${parent[1]}`, `N${notInstructions[0]}` );
+      this.createLinkForGraph(linkWithFather, `N${notInstructions[0]}`, `N${children[1]}` );
+    }
   }
 
   drawBrothers(parent: any){
@@ -352,10 +408,12 @@ export class ComplexityComponent{
       for (let init = 0; init < checkBrothers.length; init++) {
 
         if (init + 1 !== checkBrothers.length){
-          const source = checkBrothers[init][2];
-          const target = checkBrothers[init + 1][1];
-          const linkWithBrother = 'l' + checkBrothers[init][2].toString() + checkBrothers[init + 1][1].toString();
-          this.createLinkForGraph(linkWithBrother, `N${source}`, `N${target}` );
+          if (checkBrothers[init][2] + 1 !== checkBrothers[init + 1][1] - 1 ){
+            const source = checkBrothers[init][2];
+            const target = checkBrothers[init + 1][1];
+            const linkWithBrother = 'l' + checkBrothers[init][2].toString() + checkBrothers[init + 1][1].toString();
+            this.createLinkForGraph(linkWithBrother, `N${source}`, `N${target}` );
+          }
         }
     }
   }
@@ -384,19 +442,6 @@ export class ComplexityComponent{
     }
     return instruction;
   }
-
-  calculateComplexityPhp(contentFilePerLine: string[]){
-
-    const contentLine = this.getContentLinePerWord(contentFilePerLine);
-    return 0;
-  }
-
-  calculateComplexityJS(contentFilePerLine: string[]){
-
-    const contentLine = this.getContentLinePerWord(contentFilePerLine);
-    return 0;
-  }
-
 
   getContentLinePerWord(contentFilePerLine: string[]): string[][]{
 
@@ -436,8 +481,10 @@ export class ComplexityComponent{
       label : 'Custom Label'
     };
 
-    this.links.push(link);
-    this.links = [...this.links];
+    if (!this.links.includes(link)){
+      this.links.push(link);
+      this.links = [...this.links];
+    }
   }
 
 

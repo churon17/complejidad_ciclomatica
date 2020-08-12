@@ -38,14 +38,14 @@
 .graph_background{
   background-color: aquamarine;
   display: flex;
-  width: 600px;
-  height: 400px;
+  width: 800px;
+  height: 600px;
   margin-top: 20px;
 }
 
 
 .code_background{
   display: flex;
-  width: 550px;
-  height: 400px;
+  width: 800px;
+  height: 600px;
 }
