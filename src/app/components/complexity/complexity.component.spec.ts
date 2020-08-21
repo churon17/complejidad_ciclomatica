@@ -56,7 +56,7 @@ describe('ComplexityComponent', () => {
       ['if', 4, 9],
       ['if', 5, 7]
     ];
-    component.getPairInstructions(contentLinePerWord, contenFilePerLine, initPosition, endPosition);
+    // component.getPairInstructions(contentLinePerWord, contenFilePerLine, initPosition, endPosition);
 
     expect(component.pairInstruction.length).toBe(2);
   });
