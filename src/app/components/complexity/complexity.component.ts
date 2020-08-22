@@ -23,9 +23,8 @@ export class ComplexityComponent{
 
   complexity: number = 0;
 
-  javaInstructions = ['if', 'for', 'while', 'public', 'class'];
-  fileName: string = 'Elegir Archivo';
-  currentFileType: string = 'Aún no seleccionado';
+  javaInstructions = ['if', 'for', 'while', 'public', 'class', 'protected', 'private'];
+  fileName: string = 'Select file';
   code: string = `print('Hola mundo')`;
 
   uploadFile: File;
@@ -60,14 +59,12 @@ export class ComplexityComponent{
       );
       this.uploadFile = null;
       return;
-  }else{
-    this.currentFileType = 'Java';
-  }
+    }
   }
 
   readFile(): Promise<string>{
 
-    return new Promise((res, reject) => {
+    return new Promise((res) => {
       const fileReader = new FileReader();
       fileReader.onload = () => {
         const content = fileReader.result;
@@ -81,44 +78,55 @@ export class ComplexityComponent{
 
     this.contentFilePerLine = contentFile.split('\n').map(line => line.trim()).filter(line => line !== '');
 
-    this.complexity = this.calculateComplexity();
-
-    console.log(this.complexity);
+    this.complexity = this.calculateComplexity(this.contentFilePerLine);
   }
 
-  calculateComplexity(): number{
+  calculateComplexity(contentFilePerLine: string[]): number{
 
-    this.contentLinePerWord = this.getContentLinePerWord(this.contentFilePerLine);
+    this.contentLinePerWord = this.getContentLinePerWord(contentFilePerLine);
 
-    this.getPairInstructions();
+    this.pairInstruction = this.getPairInstructions(contentFilePerLine, this.contentLinePerWord);
 
     this.parentsInstructions = this.getParentsInstructions(this.pairInstruction);
 
     this.drawAllNodesAndLinksWithFathers();
 
-    console.log(this.links);
-
-    console.log(this.nodes);
+    const linksSize = this.links.length;
+    const nodesSize = this.nodes.length;
+    const methodsAmount = this.parentsInstructions[0].childrens.length;
 
     if (this.parentsInstructions[0].parent[0] === 'class'){
-      // tslint:disable-next-line: max-line-length
-      return (this.links.length - this.nodes.length + (2 * this.parentsInstructions[0].childrens.length)) / this.parentsInstructions[0].childrens.length;
+      return (linksSize - nodesSize + (2 * methodsAmount)) / methodsAmount;
     }
 
   }
 
-  getPairInstructions() {
+  getContentLinePerWord(contentFilePerLine: string[]): string[][]{
 
-    const endPosition = this.contentFilePerLine.length;
+    const contentLine: string[][] = [];
+
+    contentFilePerLine.forEach((line: string) => {
+
+        const wordsInLine = line.split(' ');
+        contentLine.push(wordsInLine);
+    });
+
+    return contentLine;
+  }
+
+  getPairInstructions(contentFilePerLine: string[], contentLinePerWord: string[]) {
+
+    const endPosition = contentFilePerLine.length;
     const initPosition = 0;
     const currentPositionsInstruction = [];
     const currentInstructions = [];
+    let pairInstruction: any[] = [];
 
     for (let init = initPosition; init < endPosition; init++){
 
-      const line = this.contentFilePerLine[init];
+      const line = contentFilePerLine[init];
 
-      const firstWordInLine = this.contentLinePerWord[init][0];
+      const firstWordInLine = contentLinePerWord[init][0];
 
       const instructionByWord = this.getSpecificInstructionByWord(firstWordInLine);
 
@@ -135,19 +143,13 @@ export class ComplexityComponent{
 
         const currentInstruction = currentInstructions.pop();
         const currentPositionInstruction: number =  currentPositionsInstruction.pop();
-        this.pairInstruction.push([currentInstruction, currentPositionInstruction, init]);
+        pairInstruction.push([currentInstruction, currentPositionInstruction, init]);
 
       }
     }
-    this.pairInstruction = this.pairInstruction.filter(array => array.includes(undefined) === false);
-  }
+    pairInstruction = pairInstruction.filter(array => array.includes(undefined) === false);
 
-  verifyOnlyOneInstruction(pairInstrucions){
-
-    if (pairInstrucions.length === 1){
-      return true;
-    }
-    return false;
+    return pairInstruction;
   }
 
   getParentsInstructions(checkParents: any[]){
@@ -202,6 +204,29 @@ export class ComplexityComponent{
     return parents;
   }
 
+  getSpecificInstructionByWord(instruction: string): string{
+
+    for (const currentInstruction of this.javaInstructions) {
+
+      if (instruction.includes(currentInstruction)){
+
+        const newInstruction: string[] = instruction.split(currentInstruction)
+                                                  .map(emptyInstruction =>  emptyInstruction.replace('', currentInstruction));
+
+        return newInstruction[0];
+      }
+    }
+    return instruction;
+  }
+
+  verifyOnlyOneInstruction(pairInstrucions){
+
+    if (pairInstrucions.length === 1){
+      return true;
+    }
+    return false;
+  }
+
   drawAllNodesAndLinksWithFathers(){
 
     /*  Ordenamos el arreglo de instrucciones padres */
@@ -247,10 +272,14 @@ export class ComplexityComponent{
       isIfAndHasElse = this.verifyIfInstructionHasElse(pairInstruction);
     }
 
-    if (pairInstruction[0] !== 'public'){
-      if (!isIfAndHasElse){
-        if (pairInstruction[0] !== 'class'){
-          this.createLinkForGraph(pairInstruction[1], pairInstruction[2]);
+    if (pairInstruction[0] !== 'private'){
+      if (pairInstruction[0] !== 'protected'){
+        if (pairInstruction[0] !== 'public'){
+          if (!isIfAndHasElse){
+            if (pairInstruction[0] !== 'class'){
+              this.createLinkForGraph(pairInstruction[1], pairInstruction[2]);
+            }
+          }
         }
       }
     }
@@ -502,34 +531,6 @@ export class ComplexityComponent{
           }
         }
     }
-  }
-
-  getSpecificInstructionByWord(instruction: string): string{
-
-    for (const currentInstruction of this.javaInstructions) {
-
-      if (instruction.includes(currentInstruction)){
-
-        const newInstruction: string[] = instruction.split(currentInstruction)
-                                                  .map(emptyInstruction =>  emptyInstruction.replace('', currentInstruction));
-
-        return newInstruction[0];
-      }
-    }
-    return instruction;
-  }
-
-  getContentLinePerWord(contentFilePerLine: string[]): string[][]{
-
-    const contentLine: string[][] = [];
-
-    contentFilePerLine.forEach((line: string) => {
-
-        const wordsInLine = line.split(' ');
-        contentLine.push(wordsInLine);
-    });
-
-    return contentLine;
   }
 
   /* Methods for Graph */
